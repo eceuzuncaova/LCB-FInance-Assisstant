@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UO Finance Assistant</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; }
+  .container { width: 100%; max-width: 720px; background: #fff; border-radius: 16px; border: 1px solid #e0ddd6; overflow: hidden; display: flex; flex-direction: column; height: 90vh; max-height: 800px; }
+  .header { background: #154733; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 12px; }
+  .header-icon { width: 40px; height: 40px; background: #FEE123; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #154733; flex-shrink: 0; }
+  .header-text h1 { color: #fff; font-size: 17px; font-weight: 600; }
+  .header-text p { color: #a8c5b5; font-size: 13px; margin-top: 2px; }
+  .messages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+  .msg { display: flex; gap: 10px; align-items: flex-start; max-width: 90%; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .bubble { padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.7; }
+  .msg.assistant .bubble { background: #f0f0ea; color: #1a1a1a; border-bottom-left-radius: 4px; }
+  .msg.user .bubble { background: #154733; color: #fff; border-bottom-right-radius: 4px; }
+  .bubble p { margin-bottom: 0.6em; }
+  .bubble p:last-child { margin-bottom: 0; }
+  .bubble ul { padding-left: 1.2em; margin: 0.4em 0; }
+  .bubble ul li { margin-bottom: 0.3em; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; margin-top: 2px; }
+  .assistant .avatar { background: #FEE123; color: #154733; }
+  .user .avatar { background: #154733; color: #FEE123; }
+  .suggestions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 1.5rem 1rem; }
+  .suggestion { background: #f0f0ea; border: 1px solid #ddd; border-radius: 20px; padding: 6px 14px; font-size: 13px; color: #333; cursor: pointer; transition: background 0.15s; }
+  .suggestion:hover { background: #e4e4dc; }
+  .input-area { padding: 1rem 1.5rem; border-top: 1px solid #e8e8e0; display: flex; gap: 10px; align-items: flex-end; }
+  .input-area textarea { flex: 1; border: 1px solid #ddd; border-radius: 12px; padding: 10px 14px; font-size: 14px; font-family: inherit; resize: none; outline: none; max-height: 120px; line-height: 1.5; transition: border 0.15s; }
+  .input-area textarea:focus { border-color: #154733; }
+  .send-btn { background: #154733; color: #FEE123; border: none; border-radius: 10px; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.15s; }
+  .send-btn:hover { opacity: 0.85; }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .typing { display: flex; align-items: center; gap: 4px; padding: 10px 14px; background: #f0f0ea; border-radius: 14px; border-bottom-left-radius: 4px; }
+  .typing span { width: 7px; height: 7px; background: #888; border-radius: 50%; animation: bounce 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-icon">UO</div>
+    <div class="header-text">
+      <h1>Lundquist Finance Assistant</h1>
+      <p>Club & Org Finance Policies · University of Oregon</p>
+    </div>
+  </div>
+
+  <div class="messages" id="messages">
+    <div class="msg assistant">
+      <div class="avatar">UO</div>
+      <div class="bubble">Hi! I'm the Lundquist College Finance Assistant. I can answer questions about club and org finance policies, budget requests, reimbursements, and funding guidelines at the University of Oregon. How can I help you today?</div>
+    </div>
+  </div>
+
+  <div class="suggestions" id="suggestions">
+    <button class="suggestion" onclick="sendSuggestion(this)">How do I submit a reimbursement?</button>
+    <button class="suggestion" onclick="sendSuggestion(this)">What's the budget request process?</button>
+    <button class="suggestion" onclick="sendSuggestion(this)">What expenses are not covered?</button>
+    <button class="suggestion" onclick="sendSuggestion(this)">How do I request funding for an event?</button>
+  </div>
+
+  <div class="input-area">
+    <textarea id="userInput" placeholder="Ask about finance policies, reimbursements, budgets..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+
+const POLICY_DOCUMENTS = `UO LUNDQUIST FINANCE ASSISTANT — POLICY REFERENCE KEY CONTACTS Dean's Office: lcbfacsupport1@uoregon.edu LCB Inter-Club Coordination (DCICC): lcbcicc@uoregon.edu ASUO Financial Support: asuofinance@uoregon.edu (541-346-0626), EMU Suite 004, M–F 9am–5pm Lundquist Events: lundquistevents@uoregon.edu GENERAL RULES FOR ALL EXPENDITURES All expenditures must enhance the cultural and physical development of students and align with the organization's mission. Only authorized student officers (listed in Campus Labs/Engage) may initiate expenditures. Funds must be available in a relevant budget line item before spending. All spending must occur within the current fiscal year (before June 30). University funds may NOT be used for: donations to charity, personal purchases, tobacco/cannabis, mobile phones, bottled water (ASUO), cash prizes, raffles, or honoring employees. Neither students nor faculty advisors may sign contracts on behalf of the university. Contact the Dean's Office immediately if a contract is needed. ALCOHOL University/ASUO funds may NOT be used to purchase alcohol. Foundation funds may be used in limited circumstances. A Permission to Serve Alcoholic Beverages Form is required for any event serving alcohol on UO property. Contact lcbfacsupport1@uoregon.edu for guidance. AWARDS, GIFTS, PRIZES & RECOGNITION Maximum value: $50 per recipient. Items $50+ must be reported as taxable income. No gift certificates or cash awards, regardless of amount. No raffles. Awards must be presented in a public or meaningful ceremony. Flowers/plants are not taxable personal property. Cannot honor current or retiring employees. CATERING & FOOD University Catering is the required caterer for all on-campus events. Outside caterers require a Catering Waiver (catering.uoregon.edu/waiver), submitted 15+ working days in advance. Outside caterers need: valid business license, liability insurance, county health permit. Takeout/pickup (pizza, sandwiches, bagels) does NOT count as catering. Delivery services (Grubhub, DoorDash, Instacart) are NOT allowed. Food at events must be open to all students and advertised at least 1 week in advance. Food is allowed for: conferences, workshops, retreats, training, recruitment, recognition events lasting at least 2 hours with a documented agenda. Food is NOT allowed for: regular meetings, holidays/birthdays, social-only gatherings, class-credit activities. Gratuity: up to 20% only. No restaurant dining with university funds unless it's an off-campus retreat/conference. No bottled water purchases with ASUO funds. No raw meat unless for an off-campus retreat with a full kitchen. EVENTS Events must have an educational objective or business purpose — not purely social. Advisor approval required before planning begins. Submit Event Intake Form at least 4 weeks before the event via Smartsheet or email lundquistevents@uoregon.edu. Events must be open to all students. HIGH-RISK ACTIVITIES & VOLUNTEERS Waivers of Liability required for: activities involving minors, climbing, ropes courses, biking, rafting, bounce castles, ferris wheels, water parks, and similar. Prohibited activities (uninsurable): hot air balloons, bungee jumping, skydiving, fireworks, mosh pits, rave parties, snowmobiles, tractor pulls, skateboarding, and more. Volunteers must complete a Conditions of Volunteer Service Form before volunteering. PURCHASING — HOW TO BUY THINGS Contact the Dean's Office First For most purchases, contact lcbfacsupport1@uoregon.edu. They can use the college purchasing card or Amazon Prime so students don't pay out of pocket. Payment Methods (ASUO) Method Use When Processing Time Internal Purchase Order Paying UO vendors (Catering, Print, Scheduling) 5 days University Purchase Order Local vendor pickup/delivery, up to $9,999 5–8 business days P-Card (Electronic Purchase) Online orders, up to $4,999; no perishables, no onsite purchases 7–14 days Service Agreement Over $9,999 OR any service requiring a signature 4–6 weeks Personal Reimbursement Member paid out of pocket; submit within 30 days; highly discouraged 5 days + up to 10 weeks for check Co-Sponsorship Sharing costs with another org or department Varies Purchase Decision Guide 1. Sharing costs with another org? Use Co-Sponsorship. 2. Buying from a UO vendor? Use Internal Purchase Order. 3. Over $9,999? Use Service Agreement. 4. Online vendor? Use P-Card. 5. Service from non-UO affiliate? Use Service Agreement. 6. Member already paid? Use Personal Reimbursement (within 30 days). 7. Local pickup/delivery? Use University Purchase Order. 8. Paying a UO affiliate (student/staff/faculty)? Contact Dean's Office. Service Agreements Required for any vendor service over $9,999, or any purchase requiring a signature. Must be initiated at least 6 weeks before service (4 weeks for simpler agreements). Cannot be used to pay anyone affiliated with UO in the past 2 years. Cannot pay family members, friends, or org members. Students CANNOT sign. Faculty CANNOT sign. Only authorized UO Contract Officers may sign. Paying UO Affiliates (Students, Staff, Faculty) Cannot be paid as independent contractors — must go through Payroll. Must be authorized in advance by club coordinator and Dean's Office. Student employees: 20-hour/week maximum. Cannot pay family members, friends, or members of your own organization. Contact Dean's Office well in advance. RECEIPTS Must show: vendor name, date, items purchased with individual prices, total, payment method. Screenshots of apps and bank/credit card statements are NOT valid receipts. Amazon order confirmations are NOT valid — need the Final Details/shipped confirmation. Required receipt types: Airfare: name, ticket number, pricing, itinerary. Hotel: name, dates, itemized charges, zero balance. Taxi/Lyft/Uber: name, pricing, payment info; 20% tip max. Restaurant: itemized copy + customer copy (signed); 20% tip max; no alcohol. REIMBURSEMENTS Personal reimbursements: submit within 30 days of purchase. Travel reimbursements: submit within 30 days of trip conclusion. Original itemized receipts required. The person seeking reimbursement cannot authorize their own expenditure — a second authorized officer must approve. Check processing can take 8–10 weeks. GOODS, EQUIPMENT & SUPPLIES Most common expenditure — generally allowable if it supports the org's mission. Contact Dean's Office to make purchases via purchasing card. IT equipment (computers, projectors, monitors): only available to orgs with a designated university office space. Must contact Dean's Office first. Becomes university property. Furnishings: only for orgs with designated office space. Requires building manager's written permission. Becomes university property. Software: only for orgs with a university-owned computer in their office. Becomes university property. Subscriptions: limited to 1 year; must have documented business purpose. Memberships/dues: limited to 1 year; must link to org mission. Airline memberships not allowed. Capital expenses (property, land, equipment upgrades): NOT allowed without prior authorization. No mobile phones/technology purchases with university funds. PRINTING & MAILING UO Printing and Mailing Services must be used first. Exception allowed if they cannot meet the required timeline — coordinate exception through Printing and Mailing Services. FACILITIES & SPACE Reserve space at least 6 weeks in advance. On-campus: scheduling.uoregon.edu. Lillis complex: business.uoregon.edu/about/lillis-complex/request-room. Off-campus: requires a Service Agreement. STIPENDS LCB club officer positions are generally voluntary and unpaid. Exceptions must be approved by the Dean's Office. ASUO-recognized org stipends are governed by the ASUO Stipend Model. FUNDRAISING All on-campus fundraising requires prior approval — submit a Fundraising and Donation Request form. I-Funds (incidental fees) may NOT be used to generate income or for donations/charity. Proceeds from I-Fund fundraising must be deposited into the org's E-Fund. Funds raised may be donated to legitimate charities only with prior approval. If gross receipts exceed $1,000, a financial report is due within 7 days of the event or before end of term. Apparel sales require prior approval. Ticketed events require fundraising pre-approval and coordination with UO Ticketing. SURPLUS & TRANSFERS Need funds beyond your budget? Submit a Surplus Request through ASUO Senate. Need to move funds between line items? Submit a Transfer Request. Steps: (1) Meet with ASUO Senator, (2) Submit form, (3) Testify at Senate, (4) Senate ruling, (5) Funds transferred (~5 days). Transfers up to $500/term can happen without Senate approval. All surplus/transferred funds must be spent before June 30. TRAVEL Key Deadlines — LCB Funds: Airfare, lodging, shuttle (groups 10+): submit 8 weeks before. Lodging, airfare (all groups): 4 weeks before. Vehicle rental/Motor Pool: 5 weeks before (Motor Pool), 4 weeks (Enterprise). Personal vehicle use: 2 weeks before. Reimbursement request: within 30 days after travel. Key Deadlines — ASUO Funds: Groups 10+ (lodging/airfare/registration): Intent 8 weeks, Request 7 weeks. Lodging/Airfare: Intent 7 weeks, Request 6 weeks. Vehicle rental/Motor Pool: Intent 4 weeks, Request 2 weeks. Registration fees: Intent 4 weeks, Request 2 weeks. Personal vehicle: Intent 2 weeks, Request 1 week. Travel General Rules: All travel requires pre-authorization even if no university funds are used. Attendees at conferences/retreats must be selected through an unbiased application process. No Airbnb, VRBO, or vacation home rentals for overnight stays. Travel activities paid with university funds are considered university activities — Student Code of Conduct applies. No single org may receive more than $10,000/year for combined travel (ASUO rule); exceptions require Senate vote. Add-on activities (event tickets, concerts, zip lines, mini-golf, etc.) are NOT reimbursable. Airfare must be booked through Premier Travel (ASUO) or UO travel agency (LCB) — NOT reimbursable if booked independently without prior approval. Lodging must follow per diem rate caps. No Airbnb/VRBO/Vacasa. Students should not pay for other students' lodging. Meals during travel are reimbursed at per diem rates after the trip. One-day trips: meals generally not covered unless the meal is the business purpose. If a hotel provides breakfast, breakfast costs are NOT reimbursable. Travelers cannot pay for another traveler's meals. Reimbursements must be submitted within 30 days of return. Original itemized receipts required. Adhere to per diem rate caps. Mileage reimbursed at IRS rate. Driver Certification required for ALL vehicle travel (personal, rental, or Motor Pool). Van travel requires additional van certification (annual, ~11-minute video + quiz). Certification expires August 30 each year — must renew annually. Proof due to ASUO Finance or Dean's Office at least 2 weeks before departure. Retreats are overnight org-organized activities (not following a 3rd-party agenda). Duration may not exceed 3 nights. Must meet at least 2 of 3 criteria: (1) approved retreat site list, (2) educational/cultural objectives with 3+ aligned activities, (3) plan to share knowledge with org members within 1 month. Must use a "Retreat" budget line item. Follow full travel timeline requirements. COMMENCEMENT REGALIA University funds cannot be used for graduation regalia (becomes university property). Allowed: stoles, tassels, cords — if total value under $50/person. FILM SCREENINGS Public film screenings require a license (copyright law). Contact Center for Student Involvement for guidance.`;
+
+const SYSTEM_PROMPT = `You are the Lundquist College of Business Finance Assistant at the University of Oregon. You help clubs, student organizations, the dean's office, and staff understand finance policies and guidelines.
+
+When answering questions:
+- Base your answers strictly on the policy documents provided
+- Cite the specific policy area your answer comes from (e.g. "Under the Catering policy..." or "The Reimbursements section states...")
+- Be clear, concise, and friendly
+- If something is not covered in the documents, say so and suggest contacting the Lundquist finance office directly
+- Maintain context across the conversation and support follow-up questions
+
+Formatting rules — follow these strictly:
+- Write in plain, conversational prose
+- Do not use markdown syntax of any kind
+- No hashtags for headers
+- No asterisks for bold or bullet points
+- No underscores for italics
+- No dashes used as bullet points
+- If you need to list items, write them as numbered sentences or use natural language like "first... second... third..."
+- Keep responses focused and easy to read as plain text
+
+POLICY DOCUMENTS:
+${POLICY_DOCUMENTS}`;
+
+let conversationHistory = [];
+const MAX_MESSAGES = 20;
+const HISTORY_WINDOW = 6;
+const SEND_COOLDOWN_MS = 3000;
+let lastSendTime = 0;
+let messageCount = 0;
+
+function renderText(text) {
+  let html = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^#{1,6}\s+(.+)$/gm, '<strong>$1</strong>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/_(.*?)_/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  const lines = html.split('\n');
+  const out = [];
+  let inList = false;
+
+  for (const line of lines) {
+    const bullet = line.match(/^[-*]\s+(.+)/);
+    const numbered = line.match(/^\d+\.\s+(.+)/);
+    if (bullet || numbered) {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      out.push(`<li>${(bullet || numbered)[1]}</li>`);
+    } else {
+      if (inList) { out.push('</ul>'); inList = false; }
+      if (line.trim()) out.push(`<p>${line}</p>`);
+      else if (out.length) out.push('');
+    }
+  }
+  if (inList) out.push('</ul>');
+
+  return out.join('');
+}
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  const now = Date.now();
+  if (now - lastSendTime < SEND_COOLDOWN_MS) {
+    addMessage('assistant', 'Please wait a moment before sending another message.');
+    return;
+  }
+
+  if (messageCount >= MAX_MESSAGES) {
+    addMessage('assistant', 'You\'ve reached the message limit for this session. Please refresh the page to start a new conversation.');
+    return;
+  }
+
+  document.getElementById('suggestions').style.display = 'none';
+  addMessage('user', msg);
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('sendBtn').disabled = true;
+  lastSendTime = now;
+  messageCount++;
+
+  conversationHistory.push({ role: 'user', content: msg });
+
+  const trimmedHistory = conversationHistory.slice(-HISTORY_WINDOW);
+
+  const typingId = addTyping();
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        messages: trimmedHistory
+      })
+    });
+
+    const data = await res.json();
+    removeTyping(typingId);
+
+    if (data.content && data.content[0]) {
+      const reply = data.content[0].text;
+      conversationHistory.push({ role: 'assistant', content: reply });
+      addMessage('assistant', reply);
+    } else {
+      addMessage('assistant', 'Something went wrong. Please try again.');
+    }
+  } catch {
+    removeTyping(typingId);
+    addMessage('assistant', 'Connection error. Please check your API key and try again.');
+  }
+
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function addMessage(role, text) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const content = role === 'assistant' ? renderText(text) : `<p>${text.replace(/\n/g, '<br>')}</p>`;
+  div.innerHTML = `<div class="avatar">${role === 'assistant' ? 'UO' : 'You'}</div><div class="bubble">${content}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const id = 'typing-' + Date.now();
+  const div = document.createElement('div');
+  div.className = 'msg assistant';
+  div.id = id;
+  div.innerHTML = `<div class="avatar">UO</div><div class="typing"><span></span><span></span><span></span></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return id;
+}
+
+function removeTyping(id) { const el = document.getElementById(id); if (el) el.remove(); }
+function sendSuggestion(btn) { document.getElementById('userInput').value = btn.textContent; sendMessage(); }
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+</script>
+</body>
+</html>
